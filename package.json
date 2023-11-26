@@ -1,0 +1,38 @@
+{
+  "name": "@bienehito/fluid-dynamics",
+  "version": "1.0.0",
+  "description": "A WebGL library simulating fluid dynamics and motion of solid objects within the fluid.",
+  "type": "module",
+  "module": "./src/index.js",
+  "unpkg": "./dist/umd.js",
+  "jsdelivr": "./dist/umd.js",
+  "scripts": {
+    "build": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bienehito/fluid-dynamics.git"
+  },
+  "keywords": [
+    "fluid",
+    "liquid",
+    "simulation",
+    "fluidsim",
+    "physics",
+    "navier-stokes",
+    "javascript",
+    "webgl",
+    "canvas",
+    "gpu"
+  ],
+  "author": "Aleksey Bieneman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bienehito/fluid-dynamics/issues"
+  },
+  "homepage": "https://github.com/bienehito/fluid-dynamics#readme",
+  "devDependencies": {
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

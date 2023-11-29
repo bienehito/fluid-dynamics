@@ -4,8 +4,12 @@
   "description": "A WebGL library simulating fluid dynamics and motion of solid objects within the fluid.",
   "type": "module",
   "module": "./src/index.js",
-  "unpkg": "./dist/umd.js",
-  "jsdelivr": "./dist/umd.js",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "unpkg": "./dist/fluid-dynamics.umd.js",
+  "jsdelivr": "./dist/fluid-dynamics.umd.js",
   "scripts": {
     "build": "webpack"
   },

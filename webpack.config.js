@@ -8,7 +8,7 @@ export default {
     mode: 'production',
     devtool: 'source-map',
     output: {
-        filename: 'umd.js',
+        filename: 'fluid-dynamics.umd.js',
         path: path.resolve(__dirname, 'dist'),
         library: {
             name: "fluidDynamics",

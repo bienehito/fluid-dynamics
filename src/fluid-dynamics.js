@@ -45,6 +45,8 @@ const config = {
 	postRender: null,
 	// Whether to run update() automatically using requestAnimationFrame.
 	autoUpdate: true,
+	// Alpha value used in calculation of exponentially smoothed _update() run time.
+	updateTimeAlpha: 1 / 120
 }
 
 /** Fluid dynamics and solid object simulation. */
@@ -202,6 +204,9 @@ export default class FluidDynanmics {
 	 */
 	solids = []
 
+	/** Exponentially smoothed run time of _update() method in seconds. */
+	updateTime = 0
+
 	/** Update function runs on every animation frame.*/
 	_update() {
 		// Timedelta since last update.
@@ -219,6 +224,8 @@ export default class FluidDynanmics {
 		// Schedule another update.
 		if (this.autoUpdate)
 			requestAnimationFrame(this._update.bind(this))
+		this.updateTime = ((Date.now() - now) / 1000) * this.updateTimeAlpha +
+			this.updateTime * (1 - this.updateTimeAlpha)
 	}
 
 	/** 

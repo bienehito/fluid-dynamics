@@ -27,8 +27,10 @@ const config = {
 	paused: false,
 	// Percent of velocity dissipated per second via exponential decay.
 	velocityDissipation: 0.1,
-	// percent of dye intencity dissipated per second via exponential decay.
+	// Percent of dye intensity dissipated per second via exponential decay.
 	dyeDissipation: 0.1,
+	// Percent of pressure dissipated per second. Increase to reduce effect of pressure waves. 
+	pressureDissipation: 0,
 	// Maximum interval in seconds between simulation updates to avoid instability.
 	maxSimulationStep: 1 / 20,
 	// Number of iterations in pressure computation. Higher number increases speed of pressure waves.
@@ -260,6 +262,16 @@ export default class FluidDynanmics {
 			texelSize: this._velocity.texelSize,
 		})
 		this._blit(this._divergence);
+
+		// Dissipate pressure.
+		if (this.pressureDissipation) {
+			this._programs.transform.use({
+				uTexture: this._pressure.read.attach(0),
+				value: identityMatrix4(1.0 - this.pressureDissipation * dt)
+			})
+			this._blit(this._pressure.write)
+			this._pressure.swap()
+		}
 
 		// Iteratively calculate pressure from divergence.
 		this._programs.pressure.use({

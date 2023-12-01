@@ -1,6 +1,6 @@
 {
   "name": "@bienehito/fluid-dynamics",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A WebGL library simulating fluid dynamics and motion of solid objects within the fluid.",
   "type": "module",
   "module": "./src/index.js",

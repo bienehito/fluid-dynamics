@@ -37,7 +37,7 @@ const config = {
 	pressureIterations: 20,
 	// Amount of curl/vorticity to add to velocity.
 	curl: 3,
-	// What to render: dye, velocity, pressure, divergence, curl, solid.
+	// What to render: dye, velocity, pressure, divergence, curl.
 	renderSource: "dye",
 	// Matrix to transform renderSource by. Must be either a scalar, or a Float32Array with column-major matrix4.
 	// renderTransform: { velocity: 0.01, pressure: rToRG(0.01), divergence: rToRG(1), curl: rToRG(0.1), solid: 0.1 }
@@ -54,17 +54,19 @@ const config = {
 /** Fluid dynamics and solid object simulation. */
 export default class FluidDynanmics {
 
-	/** Constructor taking WebGL2RenderingContext context and options - see config above for defaults. */
-	constructor(gl, opts) {
-		if (!(gl instanceof WebGL2RenderingContext)) throw "webgl2 is required"
-		gl.getExtension('EXT_color_buffer_float');
+	/** Constructor taking HTMLCanvasElement/WebGL2RenderingContext context and options - see config above for defaults. */
+	constructor(canvasOrGl, opts) {
+		if (canvasOrGl instanceof HTMLCanvasElement) this._gl = canvasOrGl.getContext("webgl2")
+		else if (canvasOrGl instanceof WebGL2RenderingContext) this._gl = canvasOrGl
+		else throw "Expected canvas or WebGL2RenderingContext, got " + canvasOrGl
+		this._gl.getExtension('EXT_color_buffer_float');
 
+		if (!opts) opts = {}
 		Object.assign(this, config, opts)
 		Object.assign(this.renderTransforms, config.renderTransforms, opts.renderTransforms || {})
 
-		this._gl = gl
 		this._aspectRatio = this._width / this._height
-		this._programs = compilePrograms(gl, {
+		this._programs = compilePrograms(this._gl, {
 			advection: [vertexShaderCode, advectionCode],
 			curl: [vertexShaderCode, curlShaderCode],
 			divergence: [vertexShaderCode, divergenceShaderCode],
@@ -77,6 +79,7 @@ export default class FluidDynanmics {
 		})
 
 		this._init_vao()
+		this._resizeIfNeeded()
 		if (this.autoUpdate)
 			requestAnimationFrame(this._update.bind(this))
 	}
@@ -215,7 +218,6 @@ export default class FluidDynanmics {
 		const now = Date.now();
 		const dt = Math.min(this._now ? (now - this._now) / 1000 : 1, this.maxSimulationStep)
 		this._now = now
-		this._resizeIfNeeded()
 		// Update simulation.
 		if (!this.paused)
 			this.step(dt)
@@ -235,6 +237,7 @@ export default class FluidDynanmics {
 	 * For details, see https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu
 	*/
 	step(dt) {
+		this._resizeIfNeeded()
 		const gl = this._gl
 		gl.disable(gl.BLEND);
 
@@ -378,6 +381,7 @@ export default class FluidDynanmics {
 
 	/** Renders renderSource buffer to screen. */
 	render() {
+		this._resizeIfNeeded()
 		const gl = this._gl
 		let source = this["_" + this.renderSource]
 		if (!source) throw `Can't find ${this.renderSource} render source.`

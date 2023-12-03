@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Dynamics Demo</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #canvas2D,
+        #canvas3D {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            /* disable pan/zoom with touch pointers */
+            touch-action: none;
+        }
+
+        #canvas2D {
+            z-index: 2
+        }
+
+        .dg.ac {
+            z-index: 3 !important;
+        }
+    </style>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6XSDE5D02Z"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-6XSDE5D02Z');
+    </script>
+</head>
+
+<body>
+    <canvas id="canvas3D"></canvas>
+    <canvas id="canvas2D"></canvas>
+    <script type="module">
+        const canvas = document.getElementById("canvas3D")
+        const canvas2D = document.getElementById("canvas2D")
+        const ctx = canvas2D.getContext("2d")
+
+        // Import fluid-dynamics library and initilize it.
+        import { FluidDynamics } from "https://cdn.jsdelivr.net/npm/@bienehito/fluid-dynamics@latest/+esm"
+        const fd = new FluidDynamics(canvas)
+        fd.simScale = 0.75
+
+        // Make canvas internal size match it's element size.
+        resizeCanvas()
+        window.addEventListener("resize", resizeCanvas)
+        function resizeCanvas() {
+            canvas.width = canvas.scrollWidth
+            canvas.height = canvas.scrollHeight
+            canvas2D.width = canvas.scrollWidth
+            canvas2D.height = canvas.scrollHeight
+            fd.width = canvas.width
+            fd.height = canvas.height
+        }
+
+        // ***********************
+        // Pointer events 
+        // ***********************
+
+        var pointer, color // Active pointer and color.
+        document.onpointerdown = (evt) => {
+            if (!evt.isPrimary || evt.target != canvas2D) return
+            pointer = evt
+            color = HSVtoRGB(Math.random(), 1, 1)
+            document.onpointermove(evt)
+        }
+        document.onpointerup = (evt) => {
+            if (!evt.isPrimary) return
+            pointer = null
+        }
+        document.onpointermove = (evt) => {
+            if (!pointer || evt.pointerId != pointer.pointerId) return
+            const velocityScale = 100;
+            splat(pointer.x - fd.left, canvas.height - pointer.y - fd.bottom,
+                (evt.x - pointer.x) * velocityScale, (pointer.y - evt.y) * velocityScale, color)
+            pointer = evt
+        }
+
+        // ***********************
+        // Liquid and dye methods
+        // ***********************
+        function splat(x, y, vx, vy, color) {
+            const radius = 30;
+            // Set liquid velocity in a circular area.
+            fd.setVelocity(x, y, 0, radius, radius, vx, vy)
+            // Set dye color in the same area.
+            fd.setDye(x, y, 0, radius, radius, color)
+        }
+
+        // Add random initial splats.
+        for (var i = 0; i < 10; i++)
+            splat(canvas.width * Math.random(), canvas.height * Math.random(),
+                1000 * Math.random() - 500, 1000 * Math.random() - 500,
+                HSVtoRGB(Math.random(), 1, 1)
+            )
+
+        // ***************************
+        // 2D animations and physics
+        // ***************************
+        fd.postRender = () => {
+            // Add/remove balls, update ball parameters.
+            fd.solids = fd.solids.slice(0, demoParams.numBalls)
+            for (let i = 0; i < demoParams.numBalls; i++) {
+                var ball = fd.solids[i]
+                if (!ball) {
+                    ball = {
+                        position: [Math.random() * canvas.width, Math.random() * canvas.height],
+                        velocity: [0, 0],
+                    }
+                    fd.solids.push(ball)
+                }
+                ball.radius = demoParams.ballRadius
+                ball.density = demoParams.ballDensity
+            }
+            // Clear 2D canvas.
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw balls on 2D canvas.
+            for (let ball of fd.solids) {
+                ctx.beginPath()
+                ctx.arc(ball.position[0], canvas.height - ball.position[1], ball.radius, 0, 2 * Math.PI)
+                ctx.fillStyle = "#ddd"
+                ctx.fill()
+            }
+            // Ball collision with walls.
+            for (let ball of fd.solids) {
+                if (ball.position[0] < ball.radius) {
+                    ball.position[0] = ball.radius
+                    ball.velocity[0] *= -1
+                }
+                if (ball.position[0] > canvas.width - ball.radius) {
+                    ball.position[0] = canvas.width - ball.radius
+                    ball.velocity[0] *= -1
+                }
+                if (ball.position[1] < ball.radius) {
+                    ball.position[1] = ball.radius
+                    ball.velocity[1] *= -1
+                }
+                if (ball.position[1] > canvas.height - ball.radius) {
+                    ball.position[1] = canvas.height - ball.radius
+                    ball.velocity[1] *= -1
+                }
+            }
+            // Show FPS
+            if (demoParams.showFps) {
+                ctx.font = "15px Arial"
+                ctx.textAlign = "left"
+                ctx.textBaseline = "top"
+                ctx.fillStyle = "yellow"
+                ctx.fillText("fps: " + fps.toFixed(2), 5, 5)
+            }
+            frameCounter += 1
+        }
+
+        // Calculate fps every sec.
+        var frameCounter = 0, fps = 0
+        window.setInterval(() => {
+            fps = frameCounter
+            frameCounter = 0
+        }, 1000)
+
+        //***************
+        // GUI
+        //***************
+        import dat from 'https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/+esm'
+
+        const demoParams = {
+            showFps: true,
+            numBalls: 2,
+            ballRadius: 50,
+            ballDensity: 2,
+            get brightness() { return Math.log2(fd.renderTransforms[fd.renderSource]) },
+            set brightness(val) { return fd.renderTransforms[fd.renderSource] = Math.pow(2, val) },
+            about: () => window.location = "https://github.com/bienehito/fluid-dynamics"
+        }
+        fd.renderTransforms.dye = 1
+
+        const gui = new dat.gui.GUI({ closeOnTop: true });
+        gui.add(demoParams, "about").name("About")
+        const fdParamsGui = gui.addFolder('Fluid-Dynamics')
+        fdParamsGui.open()
+        const fdPositionGui = fdParamsGui.addFolder("Position")
+        fdPositionGui.add(fd, "left").min(0).max(canvas.width)
+        fdPositionGui.add(fd, "bottom").min(0).max(canvas.height)
+        fdPositionGui.add(fd, "height").min(0).max(canvas.width)
+        fdPositionGui.add(fd, "width").min(0).max(canvas.height)
+        fdParamsGui.add(fd, "simScale").min(0.01).max(2)
+        fdParamsGui.add(fd, "dyeScale").min(0.01).max(2)
+        fdParamsGui.add(fd, "velocityDissipation").min(0).max(2)
+        fdParamsGui.add(fd, "dyeDissipation").min(0).max(2)
+        fdParamsGui.add(fd, "pressureDissipation").min(0).max(10)
+        fdParamsGui.add(fd, "pressureIterations").min(1).max(200)
+        fdParamsGui.add(fd, "curl").min(0).max(50)
+        fdParamsGui.add(fd, "renderSource").options(["dye", "velocity", "pressure", "divergence", "curl"])
+        fdParamsGui.add(fd, "paused")
+        const demoParamsGui = gui.addFolder('Demo');
+        demoParamsGui.open()
+        demoParamsGui.add(demoParams, "showFps").name("Show FPS")
+        demoParamsGui.add(demoParams, "numBalls").name("Number of balls").min(0).max(100).step(1)
+        demoParamsGui.add(demoParams, "ballRadius").name("Ball radius").min(5).max(300)
+        demoParamsGui.add(demoParams, "ballDensity").name("Ball density").min(0.1).max(10)
+        demoParamsGui.add(demoParams, "brightness").name("Brightness").min(-10).max(10).step(0.1).listen()
+
+        /** Converts hsv color to rgb. All values are in 0..1 range. */
+        function HSVtoRGB(h, s, v) {
+            let r, g, b, i, f, p, q, t;
+            i = Math.floor(h * 6);
+            f = h * 6 - i;
+            p = v * (1 - s);
+            q = v * (1 - f * s);
+            t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v, g = t, b = p; break;
+                case 1: r = q, g = v, b = p; break;
+                case 2: r = p, g = v, b = t; break;
+                case 3: r = p, g = q, b = v; break;
+                case 4: r = t, g = p, b = v; break;
+                case 5: r = v, g = p, b = q; break;
+            }
+            return [r, g, b]
+        }
+    </script>
+</body>
+
+</html>

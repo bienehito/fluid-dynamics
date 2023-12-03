@@ -3,7 +3,7 @@ Fluid Dynamics is a JavaScript library for simulating fluid dynamics and motion 
 
 Library is distributed as the `@bienehito/fluid-dynamics` npm package and through `jsdelivr.net` and `unpkg.com` CDNs. 
 
-## Demo Page: TODO
+## [Demo](https://bienehito.github.io/fluid-dynamics/)
 
 ## Getting Started
 

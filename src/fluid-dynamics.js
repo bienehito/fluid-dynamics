@@ -40,8 +40,7 @@ const config = {
 	// What to render: dye, velocity, pressure, divergence, curl.
 	renderSource: "dye",
 	// Matrix to transform renderSource by. Must be either a scalar, or a Float32Array with column-major matrix4.
-	// renderTransform: { velocity: 0.01, pressure: rToRG(0.01), divergence: rToRG(1), curl: rToRG(0.1), solid: 0.1 }
-	renderTransforms: { velocity: 0.01, pressure: 0.01, divergence: 1, curl: 0.1, solid: 0.1 },
+	renderTransforms: { velocity: 0.01, pressure: 0.01, divergence: 1, curl: 0.1},
 	// Pre/post render callbacks: function(dt), where dt is time delta in seconds.
 	preRender: null,
 	postRender: null,
@@ -164,6 +163,7 @@ export default class FluidDynanmics {
 	 * All dimensions are in screen pixels.
 	 */
 	setVelocity(x, y, angle, majorSize, minorSize, dx, dy) {
+		this._resizeIfNeeded()
 		this._programs.splat.use({
 			uSource: this._velocity.read.attach(0),
 			point: [x / this._width, y / this._height],
@@ -176,11 +176,10 @@ export default class FluidDynanmics {
 
 	/** 
 	 * Sets dye color in a gaussian splat of radius at x, y position.
-	 * color is a [r,g,b] in 0..1 range or random will be used if none is provided.
-	 * All dimensions are in screen pixels.
+	 * color is a [r,g,b] in 0..1 range. All dimensions are in screen pixels.
 	*/
 	setDye(x, y, angle, majorSize, minorSize, color) {
-		if (!color) color = HSVtoRGB(Math.random(), 1.0, 1.0)
+		this._resizeIfNeeded()
 		this._programs.splat.use({
 			uSource: this._dye.read.attach(0),
 			point: [x / this._width, y / this._height],
@@ -395,25 +394,6 @@ export default class FluidDynanmics {
 		})
 		this._blit(null)
 	}
-}
-
-/** Converts hsv color to rgb. All values are in 0..1 range. */
-function HSVtoRGB(h, s, v) {
-	let r, g, b, i, f, p, q, t;
-	i = Math.floor(h * 6);
-	f = h * 6 - i;
-	p = v * (1 - s);
-	q = v * (1 - f * s);
-	t = v * (1 - (1 - f) * s);
-	switch (i % 6) {
-		case 0: r = v, g = t, b = p; break;
-		case 1: r = q, g = v, b = p; break;
-		case 2: r = p, g = v, b = t; break;
-		case 3: r = p, g = q, b = v; break;
-		case 4: r = t, g = p, b = v; break;
-		case 5: r = v, g = p, b = q; break;
-	}
-	return [r, g, b]
 }
 
 /** A scaled identify matrix. */
